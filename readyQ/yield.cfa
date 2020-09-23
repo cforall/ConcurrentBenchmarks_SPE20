@@ -1,0 +1,91 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <limits.h>
+
+extern "C" {
+	#include <locale.h>
+	#include <getopt.h>
+}
+
+#include <unistd.h>
+
+#include <clock.hfa>
+#include <time.hfa>
+#include <stats.hfa>
+
+#include "../benchcltr.hfa"
+
+extern bool traceHeapOn();
+
+
+volatile bool run = false;
+volatile unsigned long long global_counter;
+
+thread __attribute__((aligned(128))) Yielder {
+	unsigned long long counter;
+};
+void ?{}( Yielder & this ) {
+	this.counter = 0;
+	((thread&)this){ "Yielder Thread", *the_benchmark_cluster };
+}
+
+void main( Yielder & this ) {
+	park( __cfaabi_dbg_ctx );
+	/* paranoid */ assert( true == __atomic_load_n(&run, __ATOMIC_RELAXED) );
+
+	while(__atomic_load_n(&run, __ATOMIC_RELAXED)) {
+		yield();
+		this.counter++;
+	}
+	__atomic_fetch_add(&global_counter, this.counter, __ATOMIC_SEQ_CST);
+}
+
+int main(int argc, char * argv[]) {
+	unsigned num_io = 1;
+	io_context_params params;
+
+	cfa_option opt[] = {
+		BENCH_OPT_CFA
+	};
+	int opt_cnt = sizeof(opt) / sizeof(cfa_option);
+
+	char **left;
+	parse_args( argc, argv, opt, opt_cnt, "[OPTIONS]...\ncforall yield benchmark", left );
+
+	{
+		printf("Running %d threads on %d processors for %f seconds\n", nthreads, nprocs, duration);
+
+		Time start, end;
+		BenchCluster cl = { num_io, params, CFA_STATS_READY_Q };
+		{
+			BenchProc procs[nprocs];
+			{
+				Yielder threads[nthreads];
+				printf("Starting\n");
+
+				bool is_tty = isatty(STDOUT_FILENO);
+				start = getTimeNsec();
+				run = true;
+
+				for(i; nthreads) {
+					unpark( threads[i] __cfaabi_dbg_ctx2 );
+				}
+				wait(duration, start, end, is_tty);
+
+				run = false;
+				end = getTimeNsec();
+				printf("\nDone\n");
+			}
+		}
+
+		printf("Took %'ld ms\n", (end - start)`ms);
+		printf("Yields per second   : %'18.2lf\n", ((double)global_counter) / (end - start)`s);
+		printf("ns per yields       : %'18.2lf\n", ((double)(end - start)`ns) / global_counter);
+		printf("Total yields        : %'15llu\n", global_counter);
+		printf("Yields per procs    : %'15llu\n", global_counter / nprocs);
+		printf("Yields/sec/procs    : %'18.2lf\n", (((double)global_counter) / nprocs) / (end - start)`s);
+		printf("ns per yields/procs : %'18.2lf\n", ((double)(end - start)`ns) / (global_counter / nprocs));
+		fflush(stdout);
+	}
+}

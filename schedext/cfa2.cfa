@@ -1,0 +1,35 @@
+#include <kernel.hfa>
+#include <monitor.hfa>
+#include <thread.hfa>
+#include <stdio.h>
+
+#include "../bench.h"
+
+monitor M {} m1, m2;
+
+void __attribute__((noinline)) call( M & mutex p1, M & mutex p2 ) {}
+void __attribute__((noinline)) wait( M & mutex p1, M & mutex p2 ) {
+	for ( times ) {
+		waitfor( call : p1, p2 );
+	}
+}
+thread T {};
+void main( T & ) {
+	BENCH(
+		for ( times ) {
+			call( m1, m2 );
+		},
+		result
+	)
+	printf( "%g\n", result );
+}
+
+int main( int argc, char * argv[] ) {
+	BENCH_START()
+	T t;
+	wait( m1, m2 );
+}
+
+// Local Variables: //
+// tab-width: 4 //
+// End: //

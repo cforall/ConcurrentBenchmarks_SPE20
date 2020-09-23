@@ -1,0 +1,26 @@
+#include <kernel.hfa>
+#include <thread.hfa>
+
+#include "../bench.h"
+
+coroutine C {};
+void main( __attribute__((unused)) C & ) {
+	for () {
+		suspend;
+	}
+}
+int main( int argc, char * argv[] ) {
+	C c;
+	BENCH_START()
+	BENCH(
+		for ( times ) {
+			resume( c );
+		},
+		result
+	)
+	printf( "%g\n", result );
+}
+
+// Local Variables: //
+// tab-width: 4 //
+// End: //

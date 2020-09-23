@@ -1,0 +1,30 @@
+#include <thread.hfa>
+
+#include "bench.h"
+
+volatile bool done = false;
+
+thread Fibre {};
+
+void main(__attribute__((unused)) Fibre & this) {
+	while ( ! done ) {
+		yield();
+	}
+}
+
+int main( int argc, char * argv[] ) {
+	BENCH_START()
+	Fibre f1;
+  	BENCH(
+		for ( times ) {
+			yield();
+		},
+		result
+	)
+	printf( "%g\n", result );
+	done = true;
+}
+
+// Local Variables: //
+// tab-width: 4 //
+// End: //

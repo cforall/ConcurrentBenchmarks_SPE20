@@ -1,0 +1,164 @@
+#pragma once
+#include <assert.h>
+#include <stdint.h>
+
+#ifdef __cforall
+	#include <kernel.hfa>
+	#include <thread.hfa>
+	#include <stats.hfa>
+#else
+#include <time.h>										// timespec
+#include <sys/time.h>									// timeval
+
+enum { TIMEGRAN = 1000000000LL };					// nanosecond granularity, except for timeval
+#endif
+
+#define BENCH_OPT_SHORT "d:p:t:SPV"
+#define BENCH_OPT_LONG \
+	{"duration",     required_argument, 0, 'd'}, \
+	{"nthreads",     required_argument, 0, 't'}, \
+	{"nprocs",       required_argument, 0, 'p'}, \
+	{"nostats",      no_argument      , 0, 'S'}, \
+	{"procstat",     no_argument      , 0, 'P'}, \
+	{"viewhalts",    no_argument      , 0, 'V'},
+
+#define BENCH_OPT_CASE \
+	case 'd': \
+		duration = strtod(arg, &end); \
+		if(*end != '\0') { \
+			fprintf(stderr, "Duration must be a valid double, was %s\n", arg); \
+			goto usage; \
+		} \
+		break; \
+	case 't': \
+		nthreads = strtoul(arg, &end, 10); \
+		if(*end != '\0' || nthreads < 1) { \
+			fprintf(stderr, "Number of threads must be a positive integer, was %s\n", arg); \
+			goto usage; \
+		} \
+		break; \
+	case 'p': \
+		nprocs = strtoul(arg, &end, 10); \
+		if(*end != '\0' || nprocs < 1) { \
+			fprintf(stderr, "Number of processors must be a positive integer, was %s\n", arg); \
+			goto usage; \
+		} \
+		break; \
+	case 'S': \
+		silent = true; \
+		break; \
+	case 'P': \
+		procstats = true; \
+		break; \
+	case 'V': \
+		viewhalts = true; \
+		break;
+
+double duration = 5;
+int nprocs = 1;
+int nthreads = 1;
+bool silent = false;
+bool continuous = false;
+bool procstats = false;
+bool viewhalts = false;
+
+#define BENCH_OPT_CFA \
+	{'d', "duration",  "Duration of the experiments in seconds", duration }, \
+	{'t', "nthreads",  "Number of threads to use", nthreads }, \
+	{'p', "nprocs",    "Number of processors to use", nprocs }, \
+	{'S', "nostats",   "Don't print statistics", silent, parse_settrue }, \
+	{'C', "constats",  "Regularly print statistics", continuous, parse_settrue }, \
+	{'P', "procstat",  "Print statistics for each processors", procstats, parse_settrue }, \
+	{'V', "viewhalts", "Visualize halts, prints timestamp and Processor id for each halt.", viewhalts, parse_settrue },
+
+#ifdef __cforall
+#include <parseargs.hfa>
+
+struct cluster * the_benchmark_cluster = 0p;
+struct BenchCluster {
+	cluster self;
+};
+
+void ?{}( BenchCluster & this, int num_io, const io_context_params & io_params, int stats ) {
+	(this.self){ "Benchmark Cluster", num_io, io_params };
+
+	assert( the_benchmark_cluster == 0p );
+	the_benchmark_cluster = &this.self;
+
+	#if !defined(__CFA_NO_STATISTICS__)
+		if( !silent ) {
+			print_stats_at_exit( this.self, stats );
+		}
+	#endif
+}
+
+struct BenchProc {
+	processor self;
+};
+
+void ?{}( BenchProc & this ) {
+	assert( the_benchmark_cluster != 0p );
+	(this.self){ "Benchmark Processor", *the_benchmark_cluster };
+
+	#if !defined(__CFA_NO_STATISTICS__)
+		if( procstats ) {
+			print_stats_at_exit( this.self, the_benchmark_cluster->print_stats );
+		}
+		if( viewhalts ) {
+			print_halts( this.self );
+		}
+	#endif
+}
+
+void wait(double duration, Time & start, Time & end, bool is_tty) {
+	for() {
+		sleep(100`ms);
+		end = getTimeNsec();
+		Duration delta = end - start;
+		/*if(is_tty)*/ {
+			printf(" %.1f\r", delta`ds);
+			fflush(stdout);
+		}
+		if( delta >= duration`s ) {
+			break;
+		}
+	}
+}
+#else
+uint64_t getTimeNsec() {
+	timespec curr;
+	clock_gettime( CLOCK_REALTIME, &curr );
+	return (int64_t)curr.tv_sec * TIMEGRAN + curr.tv_nsec;
+}
+
+uint64_t to_miliseconds( uint64_t durtn ) { return durtn / (TIMEGRAN / 1000LL); }
+double to_fseconds(uint64_t durtn ) { return durtn / (double)TIMEGRAN; }
+uint64_t from_fseconds(double sec) { return sec * TIMEGRAN; }
+
+
+void wait_duration(double duration, uint64_t & start, uint64_t & end, bool is_tty) {
+	for(;;) {
+		usleep(100000);
+		end = getTimeNsec();
+		uint64_t delta = end - start;
+		/*if(is_tty)*/ {
+			printf(" %.1f\r", to_fseconds(delta));
+			fflush(stdout);
+		}
+		if( delta >= from_fseconds(duration) ) {
+			break;
+		}
+	}
+}
+#endif
+
+
+void bench_usage( char * argv [] ) {
+	fprintf( stderr, "Usage: %s : [options]\n", argv[0] );
+	fprintf( stderr, "\n" );
+	fprintf( stderr, "  -d, --duration=DURATION  Duration of the experiment, in seconds\n" );
+	fprintf( stderr, "  -t, --nthreads=NTHREADS  Number of user threads\n" );
+	fprintf( stderr, "  -p, --nprocs=NPROCS      Number of kernel threads\n" );
+	fprintf( stderr, "  -S, --nostats            Don't print cluster stats\n" );
+	fprintf( stderr, "  -P, --procstat           Print processor stats" );
+}

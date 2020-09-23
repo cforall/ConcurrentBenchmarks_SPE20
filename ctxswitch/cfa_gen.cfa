@@ -1,0 +1,24 @@
+#include "../bench.h"
+
+generator G {};
+void main( G & ) {
+	for () {
+		suspend;
+	}
+}
+
+int main( int argc, char * argv[] ) {
+	G g;
+	BENCH_START()
+	BENCH(
+		for ( times ) {
+			resume( g );
+		},
+		result
+	)
+	printf( "%g\n", result );
+}
+
+// Local Variables: //
+// tab-width: 4 //
+// End: //

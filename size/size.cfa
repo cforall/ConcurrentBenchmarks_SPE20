@@ -1,0 +1,9 @@
+#include <kernel.hfa>
+
+int main(){
+	printf("Coroutine : %zu bytes\n", sizeof( $coroutine ));
+	printf("Monitor   : %zu bytes\n", sizeof( $monitor   ));
+	printf("Thread    : %zu bytes\n", sizeof( $thread    ));
+	printf("Processor : %zu bytes\n", sizeof( processor  ));
+	printf("Cluster   : %zu bytes\n", sizeof( cluster    ));
+}

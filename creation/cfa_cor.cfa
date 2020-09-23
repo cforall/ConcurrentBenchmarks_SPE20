@@ -1,0 +1,27 @@
+#include <stdio.h>
+#include <coroutine.hfa>
+
+#include "bench.h"
+
+coroutine MyCoroutine {};
+void ?{}( MyCoroutine & this ) {
+#ifdef EAGER
+	resume( this );
+#endif
+}
+void main( MyCoroutine & ) {}
+
+int main( int argc, char * argv[] ) {
+	BENCH_START()
+	BENCH(
+		for ( times ) {
+			MyCoroutine c;
+		},
+		result
+	)
+	printf( "%g\n", result );
+}
+
+// Local Variables: //
+// tab-width: 4 //
+// End: //

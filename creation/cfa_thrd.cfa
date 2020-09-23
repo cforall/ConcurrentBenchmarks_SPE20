@@ -1,0 +1,22 @@
+#include <stdio.h>
+#include <thread.hfa>
+
+#include "bench.h"
+
+thread MyThread {};
+void main(MyThread &) {}
+
+int main( int argc, char * argv[] ) {
+	BENCH_START()
+	BENCH(
+		for ( times ) {
+			MyThread m;
+		},
+		result
+	)
+	printf( "%g\n", result );
+}
+
+// Local Variables: //
+// tab-width: 4 //
+// End: //

@@ -1,0 +1,23 @@
+#include <monitor.hfa>
+#include <stdio.h>
+
+#include "bench.h"
+
+monitor M {} m1, m2;
+
+void __attribute__((noinline)) call( M & mutex p1, M & mutex p2 ) {}
+
+int main( int argc, char * argv[] ) {
+	BENCH_START()
+	BENCH(
+		for ( times ) {
+			call( m1, m2 );
+		},
+		result
+	)
+	printf( "%g\n", result );
+}
+
+// Local Variables: //
+// tab-width: 4 //
+// End: //

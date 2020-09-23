@@ -1,0 +1,18 @@
+#include <thread.hfa>
+
+#include "bench.h"
+
+int main( int argc, char * argv[] ) {
+	BENCH_START()
+	BENCH(
+		for ( times ) {
+			yield();
+		},
+		result
+	)
+	printf( "%g\n", result );
+}
+
+// Local Variables: //
+// tab-width: 4 //
+// End: //

@@ -1,0 +1,33 @@
+#include <kernel.hfa>
+#include <thread.hfa>
+
+#include "bench.h"
+
+void noOp(void) {}
+
+coroutine C {} c;
+
+void ?{}( C & this ) {
+	prime(this);
+}
+
+void main( __attribute__((unused)) C & this ) {
+	while () {
+		suspend_then(noOp);
+	}
+}
+
+int main( int argc, char * argv[] ) {
+	BENCH_START()
+	BENCH(
+		for ( times ) {
+			resume( c );
+		},
+		result
+	)
+	printf( "%g\n", result );
+}
+
+// Local Variables: //
+// tab-width: 4 //
+// End: //

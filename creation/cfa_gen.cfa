@@ -1,0 +1,22 @@
+#include "../bench.h"
+
+generator G {
+	volatile int restart; // ensure compiler does not optimize away all the code
+};
+void ?{}( G & g ) { g.restart = 0; }
+void main( G & ) {}
+
+int main( int argc, char * argv[] ) {
+	BENCH_START()
+	BENCH(
+		for ( times ) {
+			 G g;
+		},
+		result
+	)
+	printf( "%g\n", result );
+}
+
+// Local Variables: //
+// tab-width: 4 //
+// End: //
