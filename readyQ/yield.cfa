@@ -31,7 +31,7 @@ void ?{}( Yielder & this ) {
 }
 
 void main( Yielder & this ) {
-	park( __cfaabi_dbg_ctx );
+	park();
 	/* paranoid */ assert( true == __atomic_load_n(&run, __ATOMIC_RELAXED) );
 
 	while(__atomic_load_n(&run, __ATOMIC_RELAXED)) {
@@ -69,7 +69,7 @@ int main(int argc, char * argv[]) {
 				run = true;
 
 				for(i; nthreads) {
-					unpark( threads[i] __cfaabi_dbg_ctx2 );
+					unpark( threads[i] );
 				}
 				wait(duration, start, end, is_tty);
 

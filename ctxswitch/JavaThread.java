@@ -39,8 +39,8 @@ public class JavaThread {
 		System.out.println( (end - start) / times );
 	}
 	public static void main(String[] args) throws InterruptedException {
-		if ( args.length > 2 ) System.exit( 1 );
-		if ( args.length == 2 ) { times = Long.parseLong(args[1]); }
+		if ( args.length > 1 ) System.exit( 1 );
+		if ( args.length == 1 ) { times = Long.parseLong(args[0]); }
 
 		for (int i = Integer.parseInt("5"); --i >= 0 ; ) {
 			InnerMain();
